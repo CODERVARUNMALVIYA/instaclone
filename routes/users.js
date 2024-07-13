@@ -17,7 +17,8 @@ email : String,
 Bio : String,
 massages:{
     type:Array,
-    default:[]
+    default:[],
+    ref:"msg"
 },
 followers:[{type: mongoose.Schema.Types.ObjectId, ref: "followers"}],
 following:[{type: mongoose.Schema.Types.ObjectId, ref: "following"}],
@@ -25,7 +26,10 @@ posts:  [{type: mongoose.Schema.Types.ObjectId, ref: "post"}],
 postsave:[{
     type: mongoose.Schema.Types.ObjectId,
     ref:"post"
-}]
+}],
+socketId: {
+    type: String,
+  },
 
 });
 

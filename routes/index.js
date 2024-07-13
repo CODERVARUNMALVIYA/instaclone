@@ -20,26 +20,11 @@ router.get('/', function(req, res) {
   res.render('index', {footer: false});
 });
 
-
-router.post('/comments', async (req, res) => {
-  try {
-    // Extract required fields from request body
-    const { postId, userId, text } = req.body;
-
-    // Create a new comment object
-    const newComment = new Comment({
-      postId: postId,
-      userId: userId,
-      text: text
-    });
-
-    // Save the new comment to the database
-    const savedComment = await newComment.save();
-
-    res.status(201).json(savedComment); // Send back the saved comment as response
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+router.get('/message', function(req, res) {
+  res.render('message', {footer: false});
+});
+router.get('/chatsection', function(req, res) {
+  res.render('chatsection', {footer: false});
 });
 
 
@@ -47,12 +32,15 @@ router.get('/login', function(req, res) {
   res.render('login', {footer: false});
 });
 
+
 router.get('/feed', isLoggedIn,async function(req, res){ //populate are work for the user data are show this are used
   const posts = await postModel.find().populate("user")
   const user= await userModel.findOne({username: req.session.passport.user})
 
   res.render('feed', {footer: true ,posts,user});
 });
+
+
 router.get('/like/:postid', isLoggedIn,async function(req, res){ 
   const user= await userModel.findOne({username: req.session.passport.user})
   const post = await postModel.findOne({_id:req.params.postid})
@@ -65,6 +53,9 @@ router.get('/like/:postid', isLoggedIn,async function(req, res){
   await post.save();
   res.json(post);
 });
+
+
+
 router.get('/postsave/:postid', isLoggedIn,async function(req, res){ 
   const user = await userModel.findOne({username: req.session.passport.user});
 
@@ -83,10 +74,14 @@ router.get('/postsave/:postid', isLoggedIn,async function(req, res){
   res.json(user);
 })
 
+
+
 router.get('/profile', isLoggedIn,async function(req, res){
   const user= await userModel.findOne({username: req.session.passport.user}).populate("posts")
   res.render('profile', {footer: true ,user});
 });
+
+
 router.get('/saved', isLoggedIn,async function(req, res){
 
   try {
@@ -105,31 +100,43 @@ router.get('/search', isLoggedIn,function(req, res) {
   res.render('search', {footer: true});
 });
 
+
+
 router.get('/comment/:postId', isLoggedIn, async (req, res) => {
-  
-      const user = await userModel.findOne({ username: req.session.passport.user });
-      const postId = req.params.postId;
-      const post = await postModel.findById(postId).populate("user");
-
-    
-
-      res.render('comment', { footer: false, user, post });
-
+  try {
+    const user = await userModel.findOne({ username: req.session.passport.user });
+    const postId = req.params.postId;
+    const post = await postModel.findById(postId).populate("user");
+    const comments = await commentModel.find({ post: postId }).populate("user");
+    res.render('comment', { footer: false, user, post, comments });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Internal Server Error");
+  }
 });
+
+
+
 
 router.get('/edit', isLoggedIn,async function(req, res) {
   const user= await userModel.findOne({username: req.session.passport.user})
   res.render('edit', {footer: true ,user});
 });
 
+
+
 router.get('/upload', isLoggedIn,function(req, res) {
   res.render('upload', {footer: true});
 });
+
+
 router.get('/username/:username', isLoggedIn,async function(req, res) {
   const regex = new RegExp(`^${req.params.username}`, 'i');
   const users=await userModel.find({username :regex})
   res.json(users)
 });
+
+
 
 router.post('/register', function(req, res, next) {
   const userData = new userModel({
@@ -146,10 +153,14 @@ router.post('/register', function(req, res, next) {
     })                    
   });
 });
+
+
 router.post('/login',passport.authenticate('local',{
 successRedirect:'/profile',
 failureRedirect:'/login',
 }),function(req,res,next){})
+
+
 
 router.get('/logout',function(req,res,next){
 req.logout(function(err){
@@ -162,6 +173,8 @@ function isLoggedIn(req, res , next){
   if(req.isAuthenticated()) return next();
   res.redirect("/login")
 }
+
+
 router.post('/update', upload.single('image') , async function(req, res) {
   const user = await userModel.findOneAndUpdate(
     {username: req.session.passport.user} , 
@@ -174,6 +187,9 @@ router.post('/update', upload.single('image') , async function(req, res) {
   await user.save();
   res.redirect("/profile");
 });
+
+
+
 router.post("/upload",isLoggedIn,upload.single("media"),async function(req ,res){
   try{
     const user= await userModel.findOne({username: req.session.passport.user})
@@ -199,5 +215,6 @@ router.post("/upload",isLoggedIn,upload.single("media"),async function(req ,res)
   
 
 })
+
 
 module.exports = router;

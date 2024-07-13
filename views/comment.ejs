@@ -1,44 +1,29 @@
-<% include ./partials/header.ejs %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comments</title>
+    <title></title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
-    <div id="comments">
-        <ul id="comment-list"></ul>
-        <form action="/comments" method="post" id="comment-form">
-            <input type="text" id="comment-input" placeholder="Add a comment">
-            <button type="submit">Post</button>
-        </form>
+<body class="flex flex-col min-h-screen">
+
+    <div id="comments-list" class="flex-1">
+        <h1>user name<samp>caption</samp></h1>
     </div>
+
+    <div id="comment-box" class="flex justify-between p-4">
+        <input class="bt-2 w-full mr-2" type="text" id="comment-input" placeholder="Write a comment...">
+        <button onclick="postComment()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Post</button>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         var socket = io();
-
-        // Display comments from server
-        socket.on('comment', function(comment) {
-            var commentList = document.getElementById('comment-list');
-            var listItem = document.createElement('li');
-            listItem.textContent = comment.text;
-            commentList.appendChild(listItem);
-        });
-
-        // Submit comment to server
-        document.getElementById('comment-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            var commentInput = document.getElementById('comment-input');
-            var commentText = commentInput.value.trim();
-            if (commentText !== '') {
-                socket.emit('comment', commentText);
-                commentInput.value = '';
-            }
-        });
+        function postComment() {
+            const inputFieldValue = document.querySelector('#comment-input').value;
+            socket.emit('mohit', inputFieldValue);
+        }
     </script>
 </body>
 </html>
-
-
-<% include ./partials/footer.ejs %>

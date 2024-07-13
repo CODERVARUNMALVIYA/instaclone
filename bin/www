@@ -21,7 +21,7 @@ app.set('port', port);
  */
 
 var server = http.createServer(app);
-socketapi.io.attach(server); // <== Also add this line
+// socketapi.io.attach(server); // <== Also add this line
 
 
 /**
