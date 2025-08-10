@@ -3,7 +3,7 @@ const mongoose =  require('mongoose');
 const plm = require('passport-local-mongoose')
 
 
-mongoose.connect('mongodb://127.0.0.1:27017/instadata');
+mongoose.connect('mongodb+srv://varunmalviya333:ZTb9RJTONRdGEnjW@cluster0.elknylu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0');
 
 const userSchema = mongoose.Schema({
 username : String,
