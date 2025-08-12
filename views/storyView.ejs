@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title><%= story.user.username %> ki Story</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+
+    .story-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background-color: black;
+    }
+
+    .story-header {
+      position: absolute;
+      top: 10px;
+      left: 15px;
+      font-weight: bold;
+      font-size: 18px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .story-header img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+
+    .story-media {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 10;
+      background: rgba(0,0,0,0.5);
+      padding: 5px 10px;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+  <div class="story-container">
+    <!-- Close Button -->
+    <div class="close-btn" onclick="window.history.back()">&#10005;</div>
+
+    <!-- Username + profile -->
+    <div class="story-header">
+      <img src="/path/to/user/profile.jpg" alt="profile">
+      <span><%= story.user.username %></span>
+    </div>
+
+    <!-- Media -->
+    <% if (story.mediaType === "image") { %>
+      <img src="/uploads/<%= story.media %>" alt="story" class="story-media">
+    <% } else { %>
+      <video autoplay muted controls class="story-media">
+        <source src="/uploads/<%= story.media %>" type="video/mp4">
+      </video>
+    <% } %>
+  </div>
+</body>
+</html>

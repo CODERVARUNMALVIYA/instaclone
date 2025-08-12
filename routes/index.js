@@ -9,6 +9,7 @@ const commentModel =require("./comment")
 const passport=require("passport")
 const localStrategy = require('passport-local');
 const post = require('./post');
+const Story = require('./story'); 
 
 
 
@@ -33,12 +34,17 @@ router.get('/login', function(req, res) {
 });
 
 
-router.get('/feed', isLoggedIn,async function(req, res){ //populate are work for the user data are show this are used
-  const posts = await postModel.find().populate("user")
-  const user= await userModel.findOne({username: req.session.passport.user})
+router.get("/feed", isLoggedIn, async (req, res) => {
+  const posts = await postModel.find().populate("user");
+  const user = await userModel.findOne({ username: req.session.passport.user });
 
-  res.render('feed', {footer: true ,posts,user});
+  const stories = await Story.find()
+    .populate("user")
+    .sort({ createdAt: -1 });
+
+  res.render("feed", { footer: true, posts, user, stories }); 
 });
+
 
 
 router.get('/like/:postid', isLoggedIn,async function(req, res){ 
@@ -123,7 +129,10 @@ router.get('/edit', isLoggedIn,async function(req, res) {
   res.render('edit', {footer: true ,user});
 });
 
-
+router.get("/story/:id", isLoggedIn, async (req, res) => {
+  const story = await Story.findById(req.params.id).populate("user");
+  res.render("storyView", { story });
+});
 
 router.get('/upload', isLoggedIn,function(req, res) {
   res.render('upload', {footer: true});
@@ -190,31 +199,41 @@ router.post('/update', upload.single('image') , async function(req, res) {
 
 
 
-router.post("/upload",isLoggedIn,upload.single("media"),async function(req ,res){
-  try{
-    const user= await userModel.findOne({username: req.session.passport.user})
-    if(!user){
-      return res.status(404).send('user is not found')
+router.post("/upload",isLoggedIn, upload.single("media"), async function (req, res) {
+  try {
+    const user = await userModel.findOne({ username: req.session.passport.user });
+    if (!user) {
+      return res.status(404).send("User not found");
     }
-    const post= await postModel.create({
+
+    if (req.body.type === "story") {
+      // Save as Story
+      const story = await Story.create({
+        media: req.file.filename,
+        user: user._id,
+        mediaType: req.file.mimetype.startsWith("video") ? "video" : "image"
+      });
+
+      await user.save();
+      return res.redirect("/feed");
+    }
+
+    // Save as Post
+    const post = await postModel.create({
       media: req.file.filename,
       user: user._id,
-      caption: req.body.caption,
-    })
+      caption: req.body.caption
+    });
 
     user.posts.push(post.id);
     await user.save();
 
-    
-  res.redirect("/feed");
-  }catch(error){
-    console.log(error)
-    res.status(404).send('kuch problem hai')
+    res.redirect("/feed");
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Something went wrong");
   }
-
-  
-
-})
-
+});
 
 module.exports = router;
