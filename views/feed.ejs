@@ -7,21 +7,23 @@
         <a href="/message"><i class="text-[1.4rem] ri-messenger-line"></i></a>
       </div>
     </div>
-   <div class="story px-3 flex gap-3 overflow-auto mt-5">
-  <% stories.forEach(function(story) { %>
+  <div class="story px-3 flex gap-3 overflow-auto mt-5">
+  <% stories.forEach(function(group) { %>
     <div class="circle flex-shrink-0">
       <div
         class="gradient w-[18vw] h-[18vw] rounded-full bg-gradient-to-r from-purple-700 to-orange-500 flex items-center justify-center">
         <div class="inner w-[92%] h-[92%] rounded-full overflow-hidden">
           <img class="w-full h-full object-cover"
-               src="/uploads/<%= story.media %>"
-               alt="<%= story.user.username %>"
-               onclick="window.location.href='/story/<%= story._id %>'">
+               src="/uploads/<%= group.stories[0].media %>"
+               alt="<%= group.user.username %>"
+               onclick="window.location.href='/stories/user/<%= group.user._id %>'">
         </div>
       </div>
+      <h1><%= group.user.username %></h1>
     </div>
   <% }) %>
 </div>
+
     <div class="posts mb-20">
     <% posts.reverse().forEach( function(elem){%>
       <div class="post mt-10 w-full min-h-[50vh]">

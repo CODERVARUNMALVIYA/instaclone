@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title><%= story.user.username %> ki Story</title>
+  <title><%= user.username %> ki Stories</title>
   <style>
     body {
       margin: 0;
@@ -15,14 +15,12 @@
       font-family: Arial, sans-serif;
       color: white;
     }
-
     .story-container {
       position: relative;
       width: 100%;
-      height: 100%;
+      height: 100vh;
       background-color: black;
     }
-
     .story-header {
       position: absolute;
       top: 10px;
@@ -34,20 +32,17 @@
       align-items: center;
       gap: 10px;
     }
-
     .story-header img {
       width: 40px;
       height: 40px;
       border-radius: 50%;
       border: 2px solid white;
     }
-
     .story-media {
       width: 100%;
-      height: 100%;
+      height: 100vh;
       object-fit: cover;
     }
-
     .close-btn {
       position: absolute;
       top: 10px;
@@ -60,6 +55,20 @@
       padding: 5px 10px;
       border-radius: 50%;
     }
+    .nav {
+      position: absolute;
+      top: 0;
+      width: 50%;
+      height: 100%;
+      cursor: pointer;
+      z-index: 5;
+    }
+    .nav-left {
+      left: 0;
+    }
+    .nav-right {
+      right: 0;
+    }
   </style>
 </head>
 <body>
@@ -69,18 +78,67 @@
 
     <!-- Username + profile -->
     <div class="story-header">
-      <img src="/path/to/user/profile.jpg" alt="profile">
-      <span><%= story.user.username %></span>
+      <img src="<%= user.profilePic %>" alt="profile">
+      <span><%= user.username %></span>
     </div>
 
+    <!-- Left & Right navigation areas -->
+    <div class="nav nav-left" onclick="prevStory()"></div>
+    <div class="nav nav-right" onclick="nextStory()"></div>
+
     <!-- Media -->
-    <% if (story.mediaType === "image") { %>
-      <img src="/uploads/<%= story.media %>" alt="story" class="story-media">
-    <% } else { %>
-      <video autoplay muted controls class="story-media">
-        <source src="/uploads/<%= story.media %>" type="video/mp4">
-      </video>
-    <% } %>
+    <div id="storyContent"></div>
+
+    <!-- Hidden div to store EJS data -->
+    <div id="storyData" data-stories='<%- JSON.stringify(stories) %>'></div>
   </div>
+
+  <script>
+    // Get stories from hidden div
+    const stories = JSON.parse(document.getElementById("storyData").dataset.stories);
+    let currentIndex = 0;
+
+    function showStory(index) {
+      const story = stories[index];
+      let html = "";
+      if (story.mediaType === "image") {
+        html = `<img src="/uploads/${story.media}" class="story-media">`;
+      } else {
+        html = `
+          <video autoplay muted controls class="story-media">
+            <source src="/uploads/${story.media}" type="video/mp4">
+          </video>
+        `;
+      }
+      document.getElementById("storyContent").innerHTML = html;
+    }
+
+    function nextStory() {
+      if (currentIndex < stories.length - 1) {
+        currentIndex++;
+        showStory(currentIndex);
+      } else {
+        window.history.back(); // Exit if no more stories
+      }
+    }
+
+    function prevStory() {
+      if (currentIndex > 0) {
+        currentIndex--;
+        showStory(currentIndex);
+      }
+    }
+
+    // Auto move to next story after 5s for images
+    setInterval(() => {
+      const story = stories[currentIndex];
+      if (story.mediaType === "image") {
+        nextStory();
+      }
+    }, 5000);
+
+    // Initial load
+    showStory(currentIndex);
+  </script>
 </body>
 </html>
