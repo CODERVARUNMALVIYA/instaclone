@@ -111,30 +111,28 @@ router.get('/postsave/:postid', isLoggedIn, async (req, res) => {
 // ---------------- PROFILE / SAVED ----------------
 router.get('/profile', isLoggedIn, async (req, res) => {
   try {
-    const currentUser = await userModel
-      .findOne({ username: req.session.passport.user })
-      .populate("posts");
-
-    res.render('profile', { footer: true, user: currentUser, currentUser });
+    const currentUser = await userModel.findById(req.user._id).populate("posts");
+    res.render('profile', { footer: true, user: currentUser, loggedInUser: currentUser });
   } catch (err) {
     console.error(err);
     res.status(500).send("Server error");
   }
 });
 
+
 // Any user's profile by ID (for search results)
-router.get('/profile/:id', isLoggedIn, async (req, res) => {
-  try {
-    const user = await userModel.findById(req.params.id).populate("posts");
-    if (!user) {
-      return res.status(404).send("User not found");
-    }
-    res.render('profile', { footer: true, user });
-  } catch (err) {
-    console.error("Profile by ID Error:", err);
-    res.status(500).send("Server Error");
-  }
-});
+// router.get('/profile/:id', isLoggedIn, async (req, res) => {
+//   try {
+//     const user = await userModel.findById(req.params.id).populate("posts");
+//     if (!user) {
+//       return res.status(404).send("User not found");
+//     }
+//     res.render('profile', { footer: true, user });
+//   } catch (err) {
+//     console.error("Profile by ID Error:", err);
+//     res.status(500).send("Server Error");
+//   }
+// });
 
 
 
@@ -251,15 +249,14 @@ router.post("/upload", isLoggedIn, upload.single("media"), async (req, res) => {
   }
 });
 
-
 router.get('/profile/:id', isLoggedIn, async (req, res) => {
   try {
     const user = await userModel.findById(req.params.id).populate("posts");
-    const currentUser = await userModel.findById(req.user._id); // logged in user
+    const loggedInUser = await userModel.findById(req.user._id); // logged in user
 
     res.render('profile', { 
       user,
-      currentUser 
+      loggedInUser  // EJS me follow/unfollow ke liye use hoga
     });
   } catch (err) {
     console.error(err);
@@ -271,20 +268,57 @@ router.get('/profile/:id', isLoggedIn, async (req, res) => {
 
 
 
+
+
 // Follow a user
 // follow
+// routes/user.js
+// routes/user.js
+// Follow/Unfollow a user
 router.post('/follow/:id', isLoggedIn, async (req, res) => {
-  let currentUser = await userModel.findById(req.user._id);
-  let targetUser = await userModel.findById(req.params.id);
+    try {
+        const targetUser = await User.findById(req.params.id);
+        const currentUser = await User.findById(req.user._id);
 
-  if (!targetUser.followers.includes(currentUser._id)) {
-    targetUser.followers.push(currentUser._id);
-    currentUser.following.push(targetUser._id);
-    await targetUser.save();
-    await currentUser.save();
-  }
-  res.json({ status: 'followed' });
+        if (!targetUser || !currentUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        let status;
+
+        if (currentUser.following.includes(targetUser._id.toString())) {
+            // Unfollow
+            currentUser.following = currentUser.following.filter(
+                id => id.toString() !== targetUser._id.toString()
+            );
+            targetUser.followers = targetUser.followers.filter(
+                id => id.toString() !== currentUser._id.toString()
+            );
+            status = 'unfollowed';
+        } else {
+            // Follow
+            currentUser.following.push(targetUser._id);
+            targetUser.followers.push(currentUser._id);
+            status = 'followed';
+        }
+
+        await currentUser.save();
+        await targetUser.save();
+
+        // Return status and updated counts
+        return res.json({
+            status,
+            followersCount: targetUser.followers.length,
+            followingCount: targetUser.following.length
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
 });
+
+
 
 router.post('/unfollow/:id', isLoggedIn, async (req, res) => {
   let currentUser = await userModel.findById(req.user._id);
@@ -297,6 +331,7 @@ router.post('/unfollow/:id', isLoggedIn, async (req, res) => {
   await currentUser.save();
   res.json({ status: 'unfollowed' });
 });
+
 
 
 
