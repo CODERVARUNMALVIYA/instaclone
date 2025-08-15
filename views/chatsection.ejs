@@ -1,53 +1,101 @@
 <% include ./partials/header.ejs %>
-  <div class="w-full min-h-screen bg-zinc-900 text-white py-5">
-    <div class="w-full px-4 flex items-center justify-start border-white">
-      
-      <a href="/message">
-        <i class="ri-arrow-left-line text-2xl text-white "></i>
-      </a>
-      <div  class="ml-6 text-white flex items-center gap-2 mt-1 ">
-        <div class="image w-[11vw] h-[11vw] rounded-full overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=2550&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="">
-        </div>
-        <div class="text">
-            <h3>username</h3>
-            <h4 class="text-xs opacity-30 leading-none">Active</h4>
-        </div>
-        <ul id="messages"></ul>
- 
+
+<div class="w-full min-h-screen bg-zinc-900 text-white py-5">
+  <!-- Header -->
+  <div class="w-full px-4 flex items-center justify-start border-white">
+    <a href="/message">
+      <i class="ri-arrow-left-line text-2xl text-white"></i>
+    </a>
+    <div class="ml-6 text-white flex items-center gap-2 mt-1">
+      <div class="image w-[11vw] h-[11vw] rounded-full overflow-hidden">
+        <img src="<%= otherUser.profilePicture %>" alt="<%= otherUser.username %>">
+      </div>
+      <div class="text">
+        <h3><%= otherUser.username %></h3>
+        <h4 class="text-xs opacity-30 leading-none">Active</h4>
+      </div>
     </div>
-   
-
-
-  
-
   </div>
-    <input class="text-black mt-[750px] w-[80%] h-10 " id="input" autocomplete="off" /><button class="text-white mt-[750px] w-[18%] " >Send</button>
-  </form>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    var socket = io();
+  <!-- Messages Container -->
+  <ul id="messages" class="mt-6 px-4 space-y-2 max-h-[70vh] overflow-y-auto"></ul>
 
-    var form = document.getElementById('form');
-    var input = document.getElementById('input');
+  <!-- Input Box -->
+  <div class="fixed bottom-0 w-full px-4 py-2 bg-zinc-900 flex gap-2">
+    <input id="input" class="flex-1 text-black px-3 py-2 rounded" type="text" placeholder="Type a message..." autocomplete="off">
+    <button id="sendBtn" class="bg-blue-600 px-4 py-2 rounded text-white">Send</button>
+  </div>
+</div>
 
-    form.addEventListener('submit', function(e) {
-      e.preventDefault();
-      if (input.value) {
-        socket.emit('chat message', input.value);
-        input.value = '';
-      }
-    });
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.7/axios.min.js"></script>
+<script>
+  const socket = io();
+  const messagesContainer = document.getElementById('messages');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('sendBtn');
 
-    socket.on('chat message', function(msg) {
-      var item = document.createElement('li');
-      item.textContent = msg;
-      document.getElementById('messages').appendChild(item);
-    });
-  </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg=="crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.7/axios.min.js" integrity="sha512-NQfB/bDaB8kaSXF8E77JjhHG5PM6XVRxvHzkZiwl3ddWCEPBa23T76MuWSwAJdMGJnmQqM0VeY9kFszsrBEFrQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  const otherUserId = "<%= otherUser._id %>";
+  const currentUserId = "<%= currentUser._id %>";
 
-  
-  <% include ./partials/footer.ejs %>
+  // Load previous messages
+  async function loadMessages(id) {
+    try {
+      const res = await axios.get(`/message/${id}`);
+      messagesContainer.innerHTML = "";
+      res.data.forEach(msg => {
+        const item = document.createElement('li');
+        item.textContent = `${msg.sender.username}: ${msg.text}`;
+        messagesContainer.appendChild(item);
+      });
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    } catch (err) {
+      console.error("Error loading messages", err);
+      messagesContainer.innerHTML = "<li style='color:red'>Failed to load messages.</li>";
+    }
+  }
+
+  loadMessages(otherUserId);
+
+  // Send message
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    try {
+      const res = await axios.post('/message/send', {
+        receiverId: otherUserId,
+        text
+      });
+
+      const msg = res.data;
+      appendMessage(msg);
+      socket.emit('chat message', msg);
+    } catch (err) {
+      console.error("Failed to send message", err);
+    }
+  }
+
+  // Append message helper
+  function appendMessage(msg) {
+    const item = document.createElement('li');
+    item.textContent = `${msg.sender.username}: ${msg.text}`;
+    messagesContainer.appendChild(item);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  // Enter key
+  input.addEventListener('keypress', e => { if(e.key === 'Enter') sendMessage(); });
+  // Send button
+  sendBtn.addEventListener('click', sendMessage);
+
+  // Receive socket messages
+  socket.on('chat message', function(msg) {
+    if (msg.sender._id !== currentUserId) {
+      appendMessage(msg);
+    }
+  });
+</script>
+
+<% include ./partials/footer.ejs %>

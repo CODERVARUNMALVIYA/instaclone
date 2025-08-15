@@ -1,13 +1,14 @@
 var express = require('express');
 var router = express.Router();
 const upload = require('./multer');
+const mongoose = require('mongoose');
 
 const userModel = require("./users");
 const postModel = require("./post");
 const commentModel = require("./comment");
 const Story = require('./story');
 const User = require('./users')
-
+const messageModel = require('./message');
 const passport = require("passport");
 const localStrategy = require('passport-local');
 
@@ -21,7 +22,6 @@ function isLoggedIn(req, res, next) {
 
 // ---------------- BASIC PAGES ----------------
 router.get('/', (req, res) => res.render('index', { footer: false }));
-router.get('/message', (req, res) => res.render('message', { footer: false }));
 router.get('/chatsection', (req, res) => res.render('chatsection', { footer: false }));
 router.get('/login', (req, res) => res.render('login', { footer: false }));
 router.get('/search', isLoggedIn, (req, res) => res.render('search', { footer: true }));
@@ -119,20 +119,6 @@ router.get('/profile', isLoggedIn, async (req, res) => {
   }
 });
 
-
-// Any user's profile by ID (for search results)
-// router.get('/profile/:id', isLoggedIn, async (req, res) => {
-//   try {
-//     const user = await userModel.findById(req.params.id).populate("posts");
-//     if (!user) {
-//       return res.status(404).send("User not found");
-//     }
-//     res.render('profile', { footer: true, user });
-//   } catch (err) {
-//     console.error("Profile by ID Error:", err);
-//     res.status(500).send("Server Error");
-//   }
-// });
 
 
 
@@ -264,10 +250,86 @@ router.get('/profile/:id', isLoggedIn, async (req, res) => {
   }
 });
 
+// ---------------- MESSAGES ----------------
+
+router.get('/chatsection/:id', isLoggedIn, async (req, res) => {
+  try {
+    const otherUser = await userModel.findById(req.params.id).lean();
+    if (!otherUser) return res.redirect('/message');
+
+    res.render('chatsection', {
+      currentUser: req.user,
+      otherUser
+    });
+  } catch (err) {
+    console.error(err);
+    res.redirect('/message');
+  }
+});
+
+// Send a message
+router.post('/send', isLoggedIn, async (req, res) => {
+  try {
+    const { receiverId, text } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(receiverId)) {
+      return res.status(400).json({ error: "Invalid receiver ID" });
+    }
+
+    const message = await messageModel.create({
+      sender: req.user._id,
+      receiver: receiverId,
+      text
+    });
+
+    const populatedMsg = await message.populate("sender", "username profilePicture")
+                                     .populate("receiver", "username profilePicture")
+                                     .execPopulate();
+
+    res.status(200).json(populatedMsg);
+  } catch (err) {
+    console.error("Failed to send message:", err);
+    res.status(500).json({ error: "Failed to send message" });
+  }
+});
 
 
+// Get messages with a user
+router.get('/message/:id', isLoggedIn, async (req, res) => {
+  const userId = req.params.id;
 
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ error: "Invalid or missing user ID" });
+  }
 
+  try {
+    const messages = await messageModel.find({
+      $or: [
+        { sender: req.user._id, receiver: userId },
+        { sender: userId, receiver: req.user._id }
+      ]
+    })
+    .populate("sender", "username profilePicture")
+    .populate("receiver", "username profilePicture")
+    .sort({ createdAt: 1 })
+    .lean();
+
+    res.status(200).json(messages);
+  } catch (err) {
+    console.error("❌ Error fetching chat:", err);
+    res.status(500).json({ error: "Failed to fetch messages" });
+  }
+});
+
+router.get('/message', isLoggedIn, async (req, res) => {
+  const chats = await messageModel.find({ $or: [
+      { sender: req.user._id },
+      { receiver: req.user._id }
+    ]}).populate('sender', 'username profilePicture')
+      .populate('receiver', 'username profilePicture')
+      .sort({ createdAt: -1 });
+
+  res.render('messages', { currentUser: req.user, chats });
+});
 
 
 // Follow a user
