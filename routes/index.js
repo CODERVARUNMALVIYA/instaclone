@@ -163,6 +163,31 @@ router.get('/username/:username', isLoggedIn, async (req, res) => {
   }
 });
 
+router.get("/search", async (req, res) => {
+  try {
+    const query = req.query.username;
+
+    if (!query || query.trim() === "") {
+      return res.json([]);
+    }
+
+    const users = await userModel.find({
+      username: { $regex: query, $options: "i" }
+    }).select("username profilePicture _id");
+
+    console.log("🔍 Query:", query);
+    console.log("✅ Users found:", users);
+
+    // Cache disable karo
+    res.set("Cache-Control", "no-store");
+
+    res.json(users);
+  } catch (err) {
+    console.error("❌ Error searching:", err);
+    res.status(500).json([]);
+  }
+});
+
 
 // ---------------- AUTH ----------------
 router.post('/register', (req, res, next) => {
@@ -320,15 +345,29 @@ router.get('/message/:id', isLoggedIn, async (req, res) => {
   }
 });
 
-router.get('/message', isLoggedIn, async (req, res) => {
-  const chats = await messageModel.find({ $or: [
-      { sender: req.user._id },
-      { receiver: req.user._id }
-    ]}).populate('sender', 'username profilePicture')
-      .populate('receiver', 'username profilePicture')
-      .sort({ createdAt: -1 });
+router.get("/message", isLoggedIn, async (req, res) => {
+  try {
+    // Current user se related saare chats find karenge
+    const recentMessages = await messageModel.find({
+      $or: [
+        { sender: req.user._id },
+        { receiver: req.user._id }
+      ]
+    })
+      .populate("sender", "username profilePicture")
+      .populate("receiver", "username profilePicture")
+      .sort({ updatedAt: -1 });
 
-  res.render('messages', { currentUser: req.user, chats });
+    // EJS file render karte waqt user bhi bhejna hoga
+    res.render("messages", {
+      user: req.user,         // 👈 Yeh important hai
+      recentMessages          // Yeh message list
+    });
+
+  } catch (err) {
+    console.error("❌ Error fetching messages:", err);
+    res.redirect("/feed");
+  }
 });
 
 
